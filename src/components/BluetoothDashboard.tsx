@@ -2,10 +2,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useBluetooth } from "@/hooks/useBluetooth";
-import { Loader2, Bluetooth } from "lucide-react";
+import { Loader2, Bluetooth, Activity } from "lucide-react";
 
 const BluetoothDashboard = () => {
-  const { devices, isScanning, error, startScanning, connectToDevice } = useBluetooth();
+  const { devices, isScanning, error, startScanning, connectToDevice, motionData } = useBluetooth();
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -83,6 +83,33 @@ const BluetoothDashboard = () => {
               ))
             )}
           </div>
+
+          {devices.some(device => device.status === 'connected') && (
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="h-6 w-6" />
+                  Motion Data
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-medium mb-2">Acceleration</h4>
+                    <p>X: {motionData.acceleration.x?.toFixed(2) || 'N/A'}</p>
+                    <p>Y: {motionData.acceleration.y?.toFixed(2) || 'N/A'}</p>
+                    <p>Z: {motionData.acceleration.z?.toFixed(2) || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium mb-2">Rotation</h4>
+                    <p>Alpha: {motionData.rotation.alpha?.toFixed(2) || 'N/A'}°</p>
+                    <p>Beta: {motionData.rotation.beta?.toFixed(2) || 'N/A'}°</p>
+                    <p>Gamma: {motionData.rotation.gamma?.toFixed(2) || 'N/A'}°</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </CardContent>
       </Card>
     </div>
