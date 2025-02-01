@@ -19,12 +19,14 @@ interface MotionData {
   };
 }
 
-// Define the requestPermission function type for DeviceMotionEvent
+// Define the requestPermission function type
 interface DeviceMotionEventWithPermission extends DeviceMotionEvent {
   requestPermission?: () => Promise<'granted' | 'denied'>;
 }
 
-interface DeviceMotionEventConstructorWithPermission extends DeviceMotionEventConstructor {
+// Create a type for the DeviceMotionEvent constructor
+interface DeviceMotionEventStatic {
+  new(): DeviceMotionEvent;
   requestPermission?: () => Promise<'granted' | 'denied'>;
 }
 
@@ -62,7 +64,7 @@ export const useBluetooth = () => {
   };
 
   const startSensors = useCallback(() => {
-    const DeviceMotionEventWithPermission = DeviceMotionEvent as unknown as DeviceMotionEventConstructorWithPermission;
+    const DeviceMotionEventWithPermission = DeviceMotionEvent as unknown as DeviceMotionEventStatic;
     
     if (typeof DeviceMotionEventWithPermission.requestPermission === 'function') {
       DeviceMotionEventWithPermission.requestPermission()
