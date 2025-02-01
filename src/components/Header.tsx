@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { User, LogIn, UserPlus, LogOut } from "lucide-react";
 import {
@@ -18,9 +18,13 @@ import {
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 
+// Log the environment variables (without exposing sensitive data)
+console.log('Supabase URL exists:', !!import.meta.env.VITE_SUPABASE_URL);
+console.log('Supabase Anon Key exists:', !!import.meta.env.VITE_SUPABASE_ANON_KEY);
+
 const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
+  import.meta.env.VITE_SUPABASE_URL || '',
+  import.meta.env.VITE_SUPABASE_ANON_KEY || ''
 );
 
 const Header = () => {
@@ -30,6 +34,32 @@ const Header = () => {
   const [password, setPassword] = useState('');
   const [user, setUser] = useState(null);
   const { toast } = useToast();
+
+  useEffect(() => {
+    // Check Supabase connection on component mount
+    const checkConnection = async () => {
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error('Supabase connection error:', error.message);
+          toast({
+            variant: "destructive",
+            title: "Connection Error",
+            description: "Unable to connect to authentication service. Please check configuration.",
+          });
+        } else {
+          console.log('Supabase connection successful');
+          if (data?.session?.user) {
+            setUser(data.session.user);
+          }
+        }
+      } catch (err) {
+        console.error('Unexpected error:', err);
+      }
+    };
+
+    checkConnection();
+  }, [toast]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
