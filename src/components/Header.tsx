@@ -22,14 +22,23 @@ import { Input } from "@/components/ui/input";
 console.log('Supabase URL exists:', !!import.meta.env.VITE_SUPABASE_URL);
 console.log('Supabase Anon Key exists:', !!import.meta.env.VITE_SUPABASE_ANON_KEY);
 
-if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+// Validate environment variables
+if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-);
+// Validate URL format
+try {
+  new URL(supabaseUrl);
+} catch (error) {
+  console.error('Invalid Supabase URL format:', error);
+  throw new Error('Invalid Supabase URL format. Please check your VITE_SUPABASE_URL environment variable.');
+}
+
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 const Header = () => {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
