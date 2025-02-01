@@ -19,6 +19,15 @@ interface MotionData {
   };
 }
 
+// Define the requestPermission function type for DeviceMotionEvent
+interface DeviceMotionEventWithPermission extends DeviceMotionEvent {
+  requestPermission?: () => Promise<'granted' | 'denied'>;
+}
+
+interface DeviceMotionEventConstructorWithPermission extends DeviceMotionEventConstructor {
+  requestPermission?: () => Promise<'granted' | 'denied'>;
+}
+
 export const useBluetooth = () => {
   const [devices, setDevices] = useState<BluetoothDevice[]>([]);
   const [isScanning, setIsScanning] = useState(false);
@@ -53,8 +62,10 @@ export const useBluetooth = () => {
   };
 
   const startSensors = useCallback(() => {
-    if (typeof DeviceMotionEvent.requestPermission === 'function') {
-      DeviceMotionEvent.requestPermission()
+    const DeviceMotionEventWithPermission = DeviceMotionEvent as unknown as DeviceMotionEventConstructorWithPermission;
+    
+    if (typeof DeviceMotionEventWithPermission.requestPermission === 'function') {
+      DeviceMotionEventWithPermission.requestPermission()
         .then(response => {
           if (response === 'granted') {
             window.addEventListener('devicemotion', handleDeviceMotion);
