@@ -2,10 +2,17 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useBluetooth } from "@/hooks/useBluetooth";
+import { useDeviceMotion } from "@/hooks/useDeviceMotion";
 import { Loader2, Bluetooth, Activity } from "lucide-react";
 
 const BluetoothDashboard = () => {
-  const { devices, isScanning, error, startScanning, connectToDevice, motionData } = useBluetooth();
+  const { devices, isScanning, error, startScanning, connectToDevice } = useBluetooth();
+  const { motionData, startSensors } = useDeviceMotion();
+
+  const handleConnect = async (deviceId: string) => {
+    await connectToDevice(deviceId);
+    startSensors();
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -69,7 +76,7 @@ const BluetoothDashboard = () => {
                       </p>
                     </div>
                     <Button
-                      onClick={() => connectToDevice(device.id)}
+                      onClick={() => handleConnect(device.id)}
                       disabled={device.status === 'connected' || device.status === 'pairing'}
                       variant={device.status === 'connected' ? 'secondary' : 'default'}
                     >
