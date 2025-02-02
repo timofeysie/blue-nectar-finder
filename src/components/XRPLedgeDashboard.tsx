@@ -5,6 +5,7 @@ import { Client } from 'xrpl'
 import { getAccount, getAccountsFromSeeds, sendXRP } from '@/lib/xrpl-helpers'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import CheckAMM from '@/components/xrpl/CheckAMM'
 
 interface AccountState {
   account: string
@@ -249,11 +250,27 @@ export default function XRPLedgeDashboard() {
         </Card>
       </div>
 
-      {/* AMM Actions */}
-      <div className="mt-8 flex justify-center space-x-4">
-        <Button className="w-full sm:w-auto">Check AMM</Button>
-        <Button className="w-full sm:w-auto">Create AMM</Button>
-      </div>
+      {/* AMM Section */}
+      <CheckAMM 
+        server={server}
+        ammAssets={ammAssets}
+        setAmmAssets={setAmmAssets}
+        onResultsUpdate={(message) => setResults(prev => ({ ...prev, ammInfo: message }))}
+      />
+
+      {/* AMM Results */}
+      <Card className="mt-4">
+        <CardHeader>
+          <CardTitle>AMM Results</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <textarea
+            value={results.ammInfo}
+            readOnly
+            className="w-full h-40 p-2 border rounded"
+          />
+        </CardContent>
+      </Card>
     </div>
   )
 } 

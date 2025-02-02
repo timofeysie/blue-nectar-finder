@@ -54,10 +54,61 @@ See [XRP Concepts](https://xrpl.org/docs/concepts) for details about the XRP Led
 
 ### AMMs Using JavaScript
 
-Create and interact with Automated Market Makers (AMMs) on the XRP Ledger using JavaScript from the [XRP Concepts](https://xrpl.org/docs/concepts) documentation.
+The first JavaScript demo involves creating and interacting with Automated Market Makers (AMMs) on the XRP Ledger.
+
+See [XRP Concepts](https://xrpl.org/docs/concepts) for details about the XRP Ledger.
+
 [AMMs Using JavaScript](https://xrpl.org/docs/tutorials/javascript/amm).
 
-Step 1: [Create an AMM](https://xrpl.org/docs/tutorials/javascript/amm/create-an-amm)
+Step 1: [Create an AMM](https://xrpl.org/docs/tutorials/javascript/amm/create-an-amm).
+
+The [example code](https://github.com/XRPLF/xrpl-dev-portal/blob/master/_code-samples/quickstart/js/11.create-amm.html) is a single HTML page with vanilla JavaScript.
+
+The implementation here uses a React dashboard component (src\components\XRPLedgeDashboard.tsx) along with the the get accounts utility called from the Seed buttons getAccountsFromSeeds function in the example repo file [_code-samples\quickstart\js\ripplex1-send-xrp.js](https://github.com/XRPLF/xrpl-dev-portal/blob/master/_code-samples/quickstart/js/ripplex1-send-xrp.js) (converted to TypeScript in the lib src\lib\xrpl-helpers.ts utility).
+
+### Using the demo
+
+To get test accounts if you have existing account seeds:
+Click Get New Standby Account and Get New Operational Account buttons.
+
+The "Get New Standby Account" and "Get New Operational Account" buttons use the [XRPL Faucet](https://faucet.altnet.rippletest.net/accounts) to get a test account and calls the following API:
+
+```txt
+https://faucet.altnet.rippletest.net/accounts
+Request Method: POST
+```
+
+with the following payload:
+
+```json
+{
+    "destination": "rsx...",
+    "userAgent": "xrpl.js"
+}
+```
+
+The result should result in a response like this:
+
+```json
+{
+    "account": {
+        "xAddress": "T7Y...",
+        "classicAddress": "rsx...",
+        "address": "rsx..."
+    },
+    "amount": 100,
+    "transactionHash": "5D6..."
+}
+```
+
+Next check if an AMM pair already exists.
+
+An AMM holds two different assets: at most one of these can be XRP, and one or both of them can be tokens.
+
+Enter a currency code in the Asset 1 Currency field. For example, XRP.
+Enter a second currency code in the Asset 2 Currency field. For example, TST.
+Enter the operational account address in the Asset 2 Issuer field.
+
 
 ## Welcome to your Lovable project
 
