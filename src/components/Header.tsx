@@ -1,36 +1,17 @@
 import { useState, useEffect } from 'react';
-import { Button } from "@/components/ui/button";
-import { User, LogIn, UserPlus, LogOut } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { useToast } from "@/components/ui/use-toast";
 import { createClient } from '@supabase/supabase-js';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-
-// Log the environment variables (without exposing sensitive data)
-console.log('Supabase URL exists:', !!import.meta.env.VITE_SUPABASE_URL);
-console.log('Supabase Anon Key exists:', !!import.meta.env.VITE_SUPABASE_ANON_KEY);
+import LoginDialog from './auth/LoginDialog';
+import RegisterDialog from './auth/RegisterDialog';
+import UserMenu from './auth/UserMenu';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// Validate environment variables
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
-// Validate URL format
 try {
   new URL(supabaseUrl);
 } catch (error) {
@@ -49,7 +30,6 @@ const Header = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Check Supabase connection on component mount
     const checkConnection = async () => {
       try {
         const { data, error } = await supabase.auth.getSession();
@@ -133,100 +113,32 @@ const Header = () => {
       <div className="container mx-auto px-4 py-4 flex justify-between items-center">
         <h1 className="text-xl font-bold">Blue Nectar Finder</h1>
         
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="flex items-center gap-2">
-              <User className="h-5 w-5" />
-              {user && <span className="text-sm">{user.email}</span>}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {user ? (
-              <>
-                <DropdownMenuItem disabled>
-                  {user.email}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleLogout}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Logout
-                </DropdownMenuItem>
-              </>
-            ) : (
-              <>
-                <DropdownMenuItem onClick={() => setIsLoginOpen(true)}>
-                  <LogIn className="mr-2 h-4 w-4" />
-                  Login
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setIsRegisterOpen(true)}>
-                  <UserPlus className="mr-2 h-4 w-4" />
-                  Register
-                </DropdownMenuItem>
-              </>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <UserMenu
+          user={user}
+          onLogin={() => setIsLoginOpen(true)}
+          onRegister={() => setIsRegisterOpen(true)}
+          onLogout={handleLogout}
+        />
 
-        <Dialog open={isLoginOpen} onOpenChange={setIsLoginOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Login</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div>
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </div>
-              <Button type="submit" className="w-full">Login</Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <LoginDialog
+          isOpen={isLoginOpen}
+          onOpenChange={setIsLoginOpen}
+          email={email}
+          setEmail={setEmail}
+          password={password}
+          setPassword={setPassword}
+          onSubmit={handleLogin}
+        />
 
-        <Dialog open={isRegisterOpen} onOpenChange={setIsRegisterOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Register</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleRegister} className="space-y-4">
-              <div>
-                <Label htmlFor="register-email">Email</Label>
-                <Input
-                  id="register-email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="register-password">Password</Label>
-                <Input
-                  id="register-password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </div>
-              <Button type="submit" className="w-full">Register</Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <RegisterDialog
+          isOpen={isRegisterOpen}
+          onOpenChange={setIsRegisterOpen}
+          email={email}
+          setEmail={setEmail}
+          password={password}
+          setPassword={setPassword}
+          onSubmit={handleRegister}
+        />
       </div>
     </header>
   );
