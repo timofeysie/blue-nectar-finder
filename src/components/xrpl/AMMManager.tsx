@@ -1,4 +1,3 @@
-
 import { useEffect } from 'react'
 import { useSupabaseClient, useUser } from '@supabase/auth-helpers-react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"

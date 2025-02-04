@@ -67,15 +67,6 @@ export default function XRPLedgeDashboard() {
   }, [user])
 
   const handleGetAccount = async (type: 'standby' | 'operational') => {
-    if (!user || !encryptionKey) {
-      toast({
-        title: "Authentication required",
-        description: "Please log in to manage accounts",
-        variant: "destructive"
-      })
-      return
-    }
-
     try {
       const accountData = await getAccount(
         type,
@@ -95,10 +86,14 @@ export default function XRPLedgeDashboard() {
 
       if (type === 'standby') {
         setStandbyAccount(fullAccountData)
-        await saveAccount(supabase, user.id, 'standby', fullAccountData, encryptionKey, server.includes('altnet') ? 'testnet' : 'devnet')
+        if (user && encryptionKey) {
+          await saveAccount(supabase, user.id, 'standby', fullAccountData, encryptionKey, server.includes('altnet') ? 'testnet' : 'devnet')
+        }
       } else {
         setOperationalAccount(fullAccountData)
-        await saveAccount(supabase, user.id, 'operational', fullAccountData, encryptionKey, server.includes('altnet') ? 'testnet' : 'devnet')
+        if (user && encryptionKey) {
+          await saveAccount(supabase, user.id, 'operational', fullAccountData, encryptionKey, server.includes('altnet') ? 'testnet' : 'devnet')
+        }
       }
     } catch (error) {
       console.error('Error getting account:', error)
@@ -110,15 +105,6 @@ export default function XRPLedgeDashboard() {
   }
 
   const handleGetAccountsFromSeeds = async () => {
-    if (!user || !encryptionKey) {
-      toast({
-        title: "Authentication required",
-        description: "Please log in to manage accounts",
-        variant: "destructive"
-      })
-      return
-    }
-
     try {
       const accounts = await getAccountsFromSeeds(
         seeds,
@@ -136,7 +122,6 @@ export default function XRPLedgeDashboard() {
         currency: ''
       }
       setStandbyAccount(standbyData)
-      await saveAccount(supabase, user.id, 'standby', standbyData, encryptionKey, server.includes('altnet') ? 'testnet' : 'devnet')
 
       const operationalData = {
         ...accounts.operational,
@@ -145,8 +130,11 @@ export default function XRPLedgeDashboard() {
         currency: ''
       }
       setOperationalAccount(operationalData)
-      await saveAccount(supabase, user.id, 'operational', operationalData, encryptionKey, server.includes('altnet') ? 'testnet' : 'devnet')
 
+      if (user && encryptionKey) {
+        await saveAccount(supabase, user.id, 'standby', standbyData, encryptionKey, server.includes('altnet') ? 'testnet' : 'devnet')
+        await saveAccount(supabase, user.id, 'operational', operationalData, encryptionKey, server.includes('altnet') ? 'testnet' : 'devnet')
+      }
     } catch (error) {
       console.error('Error getting accounts from seeds:', error)
       setResults(prev => ({
