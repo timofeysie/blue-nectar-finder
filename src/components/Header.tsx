@@ -135,8 +135,9 @@ const Header = () => {
         
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="sm" className="flex items-center gap-2">
               <User className="h-5 w-5" />
+              {user && <span className="text-sm">{user.email}</span>}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
