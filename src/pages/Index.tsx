@@ -1,5 +1,5 @@
 import BluetoothDashboard from "@/components/BluetoothDashboard";
-import DeviceMotionDashboard from "@/components/DeviceMotionDashboard";
+import DeviceMotionDashboard from "@/components/device/DeviceMotionDashboard";
 import Header from "@/components/Header";
 import XRPLedgeDashboard from "@/components/XRPLedgeDashboard";
 

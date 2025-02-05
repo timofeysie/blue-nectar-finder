@@ -4,6 +4,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useDeviceMotion } from "@/hooks/useDeviceMotion"
 import { Activity, Smartphone } from "lucide-react"
 import { useState } from "react"
+import { StairTracker } from "./StairTracker"
 
 const DeviceMotionDashboard = () => {
   const { motionData, startSensors } = useDeviceMotion()
@@ -120,9 +121,11 @@ const DeviceMotionDashboard = () => {
               mobile device with modern browser support.
             </p>
           </div>
+          <StairTracker />
         </CardContent>
       </Card>
     </div>
+
   )
 }
 
