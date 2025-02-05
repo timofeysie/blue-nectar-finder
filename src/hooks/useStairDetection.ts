@@ -7,73 +7,103 @@ interface StairData {
   totalElevation: number; // in meters
 }
 
-export const useStairDetection = () => {
+interface DetectionConfig {
+  windowSize: number;
+  peakThreshold: number;
+  valleyThreshold: number;
+  minCycleTime: number;
+  betaMin: number;
+  betaMax: number;
+}
+
+const DEFAULT_CONFIG: DetectionConfig = {
+  windowSize: 10,
+  peakThreshold: 1.2,
+  valleyThreshold: 0.8,
+  minCycleTime: 300,
+  betaMin: 20,
+  betaMax: 60,
+};
+
+export const useStairDetection = (config: Partial<DetectionConfig> = {}) => {
   const { motionData, startSensors } = useDeviceMotion();
+  const [detectionConfig, setDetectionConfig] = useState<DetectionConfig>({
+    ...DEFAULT_CONFIG,
+    ...config
+  });
+  
   const [stairData, setStairData] = useState<StairData>({
     isClimbingStairs: false,
     stepCount: 0,
     totalElevation: 0,
   });
 
-  // Constants for detection
-  const ACCELERATION_THRESHOLD = 1.2; // m/s²
-  const STEP_COOLDOWN = 500; // ms
-  const AVG_STAIR_HEIGHT = 0.17; // meters (typical stair height)
-  
-  let lastStepTime = 0;
-  let isProcessingStep = false;
+  const [debugData, setDebugData] = useState({
+    currentAcceleration: 0,
+    avgAcceleration: 0,
+    isPotentialStep: false,
+    betaAngle: 0,
+  });
+
+  const accelerationWindow: number[] = [];
+  let lastPeakTime = 0;
+  let isPotentialStep = false;
 
   useEffect(() => {
     const detectStairStep = () => {
       const { acceleration, rotation } = motionData;
-      const currentTime = Date.now();
+      if (!acceleration.z) return;
 
-      // Check if we're in the cooldown period
-      if (currentTime - lastStepTime < STEP_COOLDOWN) {
-        return;
+      accelerationWindow.push(acceleration.z);
+      if (accelerationWindow.length > detectionConfig.windowSize) {
+        accelerationWindow.shift();
       }
 
-      // Vertical acceleration (z-axis) spike indicates potential step
-      if (
-        acceleration.z !== null &&
-        acceleration.z > ACCELERATION_THRESHOLD &&
-        !isProcessingStep
-      ) {
-        isProcessingStep = true;
+      const avgAcceleration = accelerationWindow.reduce((a, b) => a + b, 0) / accelerationWindow.length;
+      const currentTime = Date.now();
+      const timeSinceLastPeak = currentTime - lastPeakTime;
 
-        // Use rotation data to help confirm it's a stair step
-        // When climbing stairs, beta (forward tilt) is typically between 20 and 60 degrees
-        if (
-          rotation.beta !== null &&
-          rotation.beta > 20 &&
-          rotation.beta < 60
-        ) {
+      // Update debug data
+      setDebugData({
+        currentAcceleration: acceleration.z,
+        avgAcceleration,
+        isPotentialStep,
+        betaAngle: rotation.beta || 0,
+      });
+
+      if (!isPotentialStep && 
+          avgAcceleration > detectionConfig.peakThreshold && 
+          timeSinceLastPeak > detectionConfig.minCycleTime) {
+        isPotentialStep = true;
+        
+        if (rotation.beta && 
+            rotation.beta > detectionConfig.betaMin && 
+            rotation.beta < detectionConfig.betaMax) {
           setStairData(prev => ({
             isClimbingStairs: true,
             stepCount: prev.stepCount + 1,
-            totalElevation: (prev.stepCount + 1) * AVG_STAIR_HEIGHT,
+            totalElevation: (prev.stepCount + 1) * 0.17,
           }));
-
-          lastStepTime = currentTime;
-
-          // Reset climbing detection after a period of no steps
-          setTimeout(() => {
-            setStairData(prev => ({
-              ...prev,
-              isClimbingStairs: false,
-            }));
-          }, 2000);
+          
+          lastPeakTime = currentTime;
         }
+      } 
+      else if (isPotentialStep && avgAcceleration < detectionConfig.valleyThreshold) {
+        isPotentialStep = false;
+      }
 
-        isProcessingStep = false;
+      if (timeSinceLastPeak > 2000) {
+        setStairData(prev => ({
+          ...prev,
+          isClimbingStairs: false,
+        }));
       }
     };
 
-    // Only run detection if we have motion data
     if (motionData.acceleration.z !== null) {
       detectStairStep();
     }
-  }, [motionData]);
+  }, [motionData, detectionConfig]);
 
   const resetStairCount = () => {
     setStairData({
@@ -83,8 +113,18 @@ export const useStairDetection = () => {
     });
   };
 
+  const updateConfig = (newConfig: Partial<DetectionConfig>) => {
+    setDetectionConfig(prev => ({
+      ...prev,
+      ...newConfig
+    }));
+  };
+
   return {
     ...stairData,
+    debugData,
+    config: detectionConfig,
+    updateConfig,
     startSensors,
     resetStairCount,
   };
