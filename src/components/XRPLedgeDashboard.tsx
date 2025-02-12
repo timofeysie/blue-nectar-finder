@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/components/ui/use-toast"
 import { getAccount, getAccountsFromSeeds } from '@/lib/xrpl-helpers'
-import AMMManager from './xrpl/AMMManager'
 import { loadEncryptionKey, loadUserAccounts, saveAccount, AccountState } from '@/lib/account-manager'
+import { Eye, EyeOff, Copy, Check } from "lucide-react"
+import CheckAMM from './xrpl/CheckAMM'
 
 export default function XRPLedgeDashboard() {
   const { toast } = useToast()
@@ -54,6 +55,11 @@ export default function XRPLedgeDashboard() {
     operational: '',
     ammInfo: ''
   })
+
+  const [showStandbySeed, setShowStandbySeed] = useState(false)
+  const [showOperationalSeed, setShowOperationalSeed] = useState(false)
+  const [copiedStandby, setCopiedStandby] = useState(false)
+  const [copiedOperational, setCopiedOperational] = useState(false)
 
   useEffect(() => {
     if (user) {
@@ -144,6 +150,21 @@ export default function XRPLedgeDashboard() {
     }
   }
 
+  const handleCopy = async (text: string, type: 'standby' | 'operational') => {
+    try {
+      await navigator.clipboard.writeText(text)
+      if (type === 'standby') {
+        setCopiedStandby(true)
+        setTimeout(() => setCopiedStandby(false), 2000)
+      } else {
+        setCopiedOperational(true)
+        setTimeout(() => setCopiedOperational(false), 2000)
+      }
+    } catch (err) {
+      console.error('Failed to copy text: ', err)
+    }
+  }
+
   return (
     <div className="container mx-auto p-4 max-w-4xl">
       <div className="mb-6">
@@ -206,11 +227,50 @@ export default function XRPLedgeDashboard() {
             <div className="space-y-4">
               <div>
                 <label className="block mb-1">Account</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={standbyAccount.account}
+                    onChange={(e) => setStandbyAccount(prev => ({...prev, account: e.target.value}))}
+                    className="w-full p-2 border rounded pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleCopy(standbyAccount.account, 'standby')}
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                    title="Copy to clipboard"
+                  >
+                    {copiedStandby ? <Check size={20} /> : <Copy size={20} />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block mb-1">Seed</label>
+                <div className="relative">
+                  <input
+                    type={showStandbySeed ? "text" : "password"}
+                    value={standbyAccount.seed}
+                    readOnly
+                    className="w-full p-2 border rounded pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowStandbySeed(!showStandbySeed)}
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  >
+                    {showStandbySeed ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
+              </div>
+              
+              <div>
+                <label className="block mb-1">XRP Balance</label>
                 <input
                   type="text"
-                  value={standbyAccount.account}
-                  onChange={(e) => setStandbyAccount(prev => ({...prev, account: e.target.value}))}
-                  className="w-full p-2 border rounded"
+                  value={standbyAccount.balance}
+                  readOnly
+                  className="w-full p-2 border rounded bg-gray-50"
                 />
               </div>
             </div>
@@ -239,11 +299,50 @@ export default function XRPLedgeDashboard() {
             <div className="space-y-4">
               <div>
                 <label className="block mb-1">Account</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={operationalAccount.account}
+                    onChange={(e) => setOperationalAccount(prev => ({...prev, account: e.target.value}))}
+                    className="w-full p-2 border rounded pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleCopy(operationalAccount.account, 'operational')}
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                    title="Copy to clipboard"
+                  >
+                    {copiedOperational ? <Check size={20} /> : <Copy size={20} />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block mb-1">Seed</label>
+                <div className="relative">
+                  <input
+                    type={showOperationalSeed ? "text" : "password"}
+                    value={operationalAccount.seed}
+                    readOnly
+                    className="w-full p-2 border rounded pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowOperationalSeed(!showOperationalSeed)}
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  >
+                    {showOperationalSeed ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block mb-1">XRP Balance</label>
                 <input
                   type="text"
-                  value={operationalAccount.account}
-                  onChange={(e) => setOperationalAccount(prev => ({...prev, account: e.target.value}))}
-                  className="w-full p-2 border rounded"
+                  value={operationalAccount.balance}
+                  readOnly
+                  className="w-full p-2 border rounded bg-gray-50"
                 />
               </div>
             </div>
@@ -257,13 +356,28 @@ export default function XRPLedgeDashboard() {
         </Card>
       </div>
 
-      {/* AMM Section */}
-      <AMMManager 
+      {/* AMM Section - CheckAMM with Results */}
+      <CheckAMM 
         server={server}
         ammAssets={ammAssets}
         setAmmAssets={setAmmAssets}
         onResultsUpdate={(message) => setResults(prev => ({ ...prev, ammInfo: message }))}
       />
+
+      {/* AMM Results Section */}
+      <Card className="mt-4">
+        <CardHeader>
+          <CardTitle>AMM Results</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <textarea
+            value={results.ammInfo}
+            readOnly
+            className="w-full h-40 p-2 border rounded"
+          />
+        </CardContent>
+      </Card>
+
     </div>
   )
 }

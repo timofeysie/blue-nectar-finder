@@ -47,7 +47,11 @@ export default function CheckAMM({ server, ammAssets, setAmmAssets, onResultsUpd
       onResultsUpdate(JSON.stringify(response, null, 2))
       await client.disconnect()
     } catch (error) {
-      onResultsUpdate(`Error checking AMM: ${error.message}`)
+      console.error('AMM check error:', error)
+      const errorMessage = typeof error === 'string' 
+        ? error 
+        : JSON.stringify(error, null, 2)
+      onResultsUpdate(errorMessage)
     }
   }
 
