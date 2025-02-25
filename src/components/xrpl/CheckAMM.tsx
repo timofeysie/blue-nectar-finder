@@ -27,31 +27,69 @@ interface CheckAMMProps {
 
 export default function CheckAMM({ server, ammAssets, setAmmAssets, onResultsUpdate }: CheckAMMProps) {
   const handleCheckAMM = async () => {
+    console.log('handleCheckAMM 2')
+
     try {
+      // Validate inputs before making the request
+      if (!ammAssets.asset1.currency || !ammAssets.asset2.currency) {
+        throw new Error('Currency fields are required for both assets')
+      }
+
+      // For non-XRP assets, issuer is required
+      if (ammAssets.asset1.currency !== 'XRP' && !ammAssets.asset1.issuer) {
+        throw new Error('Issuer is required for non-XRP asset 1')
+      }
+      if (ammAssets.asset2.currency !== 'XRP' && !ammAssets.asset2.issuer) {
+        throw new Error('Issuer is required for non-XRP asset 2')
+      }
+
       const client = new Client(server)
       await client.connect()
       
-      // Here we'll add the AMM lookup logic
-      const response = await client.request({
+      // Prepare the request with correct format
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const request: any = {
         command: 'amm_info',
-        asset1: {
-          currency: ammAssets.asset1.currency,
-          issuer: ammAssets.asset1.issuer,
-        },
-        asset2: {
-          currency: ammAssets.asset2.currency,
-          issuer: ammAssets.asset2.issuer,
+        ledger_index: 'validated'
+      }
+
+      // Format asset1 as "asset" (ensure currency is uppercase)
+      if (ammAssets.asset1.currency.toUpperCase() === 'XRP') {
+        request.asset = {
+          currency: 'XRP'
         }
-      })
+      } else {
+        request.asset = {
+          currency: ammAssets.asset1.currency.toUpperCase(),
+          issuer: ammAssets.asset1.issuer.trim()
+        }
+      }
+
+      // Format asset2 (ensure currency is uppercase)
+      if (ammAssets.asset2.currency.toUpperCase() === 'XRP') {
+        request.asset2 = {
+          currency: 'XRP'
+        }
+      } else {
+        request.asset2 = {
+          currency: ammAssets.asset2.currency.toUpperCase(),
+          issuer: ammAssets.asset2.issuer.trim()
+        }
+      }
+
+      console.log('Sending request:', JSON.stringify(request, null, 2))
+      const response = await client.request(request)
       
       onResultsUpdate(JSON.stringify(response, null, 2))
       await client.disconnect()
     } catch (error) {
       console.error('AMM check error:', error)
-      const errorMessage = typeof error === 'string' 
-        ? error 
-        : JSON.stringify(error, null, 2)
-      onResultsUpdate(errorMessage)
+      const errorMessage = typeof error === 'object' && error !== null && 'message' in error
+        ? error.message
+        : typeof error === 'string'
+          ? error
+          : JSON.stringify(error, null, 2)
+      onResultsUpdate(`Error: ${errorMessage}`)
     }
   }
 
@@ -67,6 +105,18 @@ export default function CheckAMM({ server, ammAssets, setAmmAssets, onResultsUpd
     } catch (error) {
       onResultsUpdate(`Error creating AMM: ${error.message}`)
     }
+  }
+
+  const handleSetupAMMCheck = () => {
+    setAmmAssets({
+      ...ammAssets,
+      asset1: { ...ammAssets.asset1, currency: 'XRP' },
+      asset2: {
+        ...ammAssets.asset2,
+        currency: 'TST',
+        issuer: 'rP9jPyP5kyvFRb6ZiRghAGw5u8SGAmU4bd'
+      }
+    })
   }
 
   return (
@@ -168,6 +218,9 @@ export default function CheckAMM({ server, ammAssets, setAmmAssets, onResultsUpd
         <div className="mt-6 flex justify-center space-x-4">
           <Button onClick={handleCheckAMM} className="w-full sm:w-auto">
             Check AMM
+          </Button>
+          <Button onClick={handleSetupAMMCheck} variant="outline" className="w-full sm:w-auto">
+            Setup AMM Check
           </Button>
           <Button onClick={handleCreateAMM} className="w-full sm:w-auto">
             Create AMM
