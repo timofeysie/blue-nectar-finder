@@ -214,4 +214,98 @@ export const checkAMM = async (
     onStatusUpdate(JSON.stringify(errorResponse, null, 2))
     throw errorResponse
   }
-} 
+}
+
+interface TrustSetTransaction {
+  TransactionType: 'TrustSet';
+  Account: string;
+  LimitAmount: {
+    currency: string;
+    issuer: string;
+    value: string;
+  };
+}
+
+/**
+ * Creates a trust line between two accounts on the XRP Ledger
+ * @param standbyWalletSeed - The seed of the account that will trust the issuer
+ * @param currency - The currency code for the trust line (e.g., 'USD', 'EUR')
+ * @param issuer - The account address that will issue the currency
+ * @param value - The maximum amount of currency that can be held
+ * @param network - The XRPL network to connect to
+ * @param onStatusUpdate - Callback function to handle status messages
+ * @returns Object containing success status, message, and transaction result
+ */
+export const createTrustline = async (
+  standbyWalletSeed: string,
+  currency: string,
+  issuer: string,
+  value: string,
+  network: string,
+  onStatusUpdate: (message: string) => void
+) => {
+  const client = new Client(network)
+  
+  try {
+    // Connect to the XRP Ledger
+    onStatusUpdate(`Connecting to ${network}....`)
+    await client.connect()
+    onStatusUpdate('Connected.')
+
+    // Create wallet from seed
+    const standby_wallet = Wallet.fromSeed(standbyWalletSeed)
+    
+    // Prepare the TrustSet transaction
+    const trustSet_tx: TrustSetTransaction = {
+      "TransactionType": "TrustSet",
+      "Account": standby_wallet.address,  // Account that's extending trust
+      "LimitAmount": {
+        "currency": currency,             // The currency code to trust
+        "issuer": issuer,                // The account to trust for issuing currency
+        "value": value                    // The maximum amount to trust
+      }
+    }
+
+    onStatusUpdate('Creating trust line from operational account to standby account...')
+    
+    // Submit and wait for validation
+    const ts_prepared = await client.autofill(trustSet_tx)
+    const ts_signed = standby_wallet.sign(ts_prepared)
+    const ts_result = await client.submitAndWait(ts_signed.tx_blob)
+
+    await client.disconnect()
+
+    // Check if transaction was successful
+    if (typeof ts_result.result.meta === 'object' && 
+        ts_result.result.meta !== null && 
+        'TransactionResult' in ts_result.result.meta && 
+        (typeof ts_result.result.meta === 'object' && 
+        ts_result.result.meta !== null && 
+        'TransactionResult' in ts_result.result.meta ? 
+        ts_result.result.meta.TransactionResult : 
+        'unknown error') === "tesSUCCESS") {
+      const successMessage = `Trustline established between account \n${issuer} \nand account\n${standby_wallet.address}.`
+      onStatusUpdate(successMessage)
+      return {
+        status: 'success',
+        message: successMessage,
+        result: ts_result
+      }
+    } else {
+      throw new Error(`Transaction failed: ${
+        typeof ts_result.result.meta === 'object' && 
+        ts_result.result.meta !== null && 
+        'TransactionResult' in ts_result.result.meta ? 
+        ts_result.result.meta.TransactionResult : 
+        'unknown error'
+      }`)
+    }
+
+  } catch (error) {
+    // Ensure client disconnects even if there's an error
+    await client.disconnect()
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+    onStatusUpdate(`TrustLine failed: ${errorMessage}`)
+    throw error
+  }
+}

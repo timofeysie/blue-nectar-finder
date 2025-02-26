@@ -1,169 +1,243 @@
-'use client'
+"use client";
 
-import { useEffect, useState } from 'react'
-import { useSupabaseClient, useUser } from '@supabase/auth-helpers-react'
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { useToast } from "@/components/ui/use-toast"
-import { getAccount, getAccountsFromSeeds } from '@/lib/xrpl-helpers'
-import { loadEncryptionKey, loadUserAccounts, saveAccount, AccountState } from '@/lib/account-manager'
-import { Eye, EyeOff, Copy, Check } from "lucide-react"
-import CheckAMM from './xrpl/CheckAMM'
+import { useEffect, useState } from "react";
+import { useSupabaseClient, useUser } from "@supabase/auth-helpers-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useToast } from "@/components/ui/use-toast";
+import {
+  getAccount,
+  getAccountsFromSeeds,
+  createTrustline,
+} from "@/lib/xrpl-helpers";
+import {
+  loadEncryptionKey,
+  loadUserAccounts,
+  saveAccount,
+  AccountState,
+} from "@/lib/account-manager";
+import { Eye, EyeOff, Copy, Check } from "lucide-react";
+import CheckAMM from "./xrpl/CheckAMM";
 
 export default function XRPLedgeDashboard() {
-  const { toast } = useToast()
-  const supabase = useSupabaseClient()
-  const user = useUser()
-  
-  const [server, setServer] = useState('wss://s.altnet.rippletest.net:51233')
-  const [seeds, setSeeds] = useState('')
-  const [encryptionKey, setEncryptionKey] = useState('')
-  
+  const { toast } = useToast();
+  const supabase = useSupabaseClient();
+  const user = useUser();
+
+  const [server, setServer] = useState("wss://s.altnet.rippletest.net:51233");
+  const [seeds, setSeeds] = useState("");
+  const [encryptionKey, setEncryptionKey] = useState("");
+
   const [standbyAccount, setStandbyAccount] = useState<AccountState>({
-    account: '',
-    seed: '',
-    balance: '',
-    amount: '',
-    destination: '',
-    currency: ''
-  })
+    account: "",
+    seed: "",
+    balance: "",
+    amount: "",
+    destination: "",
+    currency: "",
+  });
 
   const [operationalAccount, setOperationalAccount] = useState<AccountState>({
-    account: '',
-    seed: '',
-    balance: '',
-    amount: '',
-    destination: '',
-    currency: ''
-  })
+    account: "",
+    seed: "",
+    balance: "",
+    amount: "",
+    destination: "",
+    currency: "",
+  });
 
   const [ammAssets, setAmmAssets] = useState({
     asset1: {
-      currency: '',
-      issuer: '',
-      amount: ''
+      currency: "",
+      issuer: "",
+      amount: "",
     },
     asset2: {
-      currency: '',
-      issuer: '',
-      amount: ''
-    }
-  })
+      currency: "",
+      issuer: "",
+      amount: "",
+    },
+  });
 
   const [results, setResults] = useState({
-    standby: '',
-    operational: '',
-    ammInfo: ''
-  })
+    standby: "",
+    operational: "",
+    ammInfo: "",
+  });
 
-  const [showStandbySeed, setShowStandbySeed] = useState(false)
-  const [showOperationalSeed, setShowOperationalSeed] = useState(false)
-  const [copiedStandby, setCopiedStandby] = useState(false)
-  const [copiedOperational, setCopiedOperational] = useState(false)
+  const [showStandbySeed, setShowStandbySeed] = useState(false);
+  const [showOperationalSeed, setShowOperationalSeed] = useState(false);
+  const [copiedStandby, setCopiedStandby] = useState(false);
+  const [copiedOperational, setCopiedOperational] = useState(false);
 
   useEffect(() => {
     if (user) {
       const initializeUser = async () => {
-        const key = await loadEncryptionKey(supabase, user.id)
-        setEncryptionKey(key)
-        await loadUserAccounts(supabase, user.id, key, setStandbyAccount, setOperationalAccount)
-      }
-      initializeUser()
+        const key = await loadEncryptionKey(supabase, user.id);
+        setEncryptionKey(key);
+        await loadUserAccounts(
+          supabase,
+          user.id,
+          key,
+          setStandbyAccount,
+          setOperationalAccount
+        );
+      };
+      initializeUser();
     }
-  }, [user])
+  }, [user]);
 
-  const handleGetAccount = async (type: 'standby' | 'operational') => {
+  const handleGetAccount = async (type: "standby" | "operational") => {
     try {
-      const accountData = await getAccount(
-        type,
-        server,
-        (message) => setResults(prev => ({
+      const accountData = await getAccount(type, server, (message) =>
+        setResults((prev) => ({
           ...prev,
-          [type]: message
+          [type]: message,
         }))
-      )
+      );
 
       const fullAccountData = {
         ...accountData,
-        amount: '',
-        destination: '',
-        currency: ''
-      }
+        amount: "",
+        destination: "",
+        currency: "",
+      };
 
-      if (type === 'standby') {
-        setStandbyAccount(fullAccountData)
+      if (type === "standby") {
+        setStandbyAccount(fullAccountData);
         if (user && encryptionKey) {
-          await saveAccount(supabase, user.id, 'standby', fullAccountData, encryptionKey, server.includes('altnet') ? 'testnet' : 'devnet')
+          await saveAccount(
+            supabase,
+            user.id,
+            "standby",
+            fullAccountData,
+            encryptionKey,
+            server.includes("altnet") ? "testnet" : "devnet"
+          );
         }
       } else {
-        setOperationalAccount(fullAccountData)
+        setOperationalAccount(fullAccountData);
         if (user && encryptionKey) {
-          await saveAccount(supabase, user.id, 'operational', fullAccountData, encryptionKey, server.includes('altnet') ? 'testnet' : 'devnet')
+          await saveAccount(
+            supabase,
+            user.id,
+            "operational",
+            fullAccountData,
+            encryptionKey,
+            server.includes("altnet") ? "testnet" : "devnet"
+          );
         }
       }
     } catch (error) {
-      console.error('Error getting account:', error)
-      setResults(prev => ({
+      console.error("Error getting account:", error);
+      setResults((prev) => ({
         ...prev,
-        [type]: `Error: ${error.message}`
-      }))
+        [type]: `Error: ${error.message}`,
+      }));
     }
-  }
+  };
 
   const handleGetAccountsFromSeeds = async () => {
     try {
-      const accounts = await getAccountsFromSeeds(
-        seeds,
-        server,
-        (message) => setResults(prev => ({
+      const accounts = await getAccountsFromSeeds(seeds, server, (message) =>
+        setResults((prev) => ({
           ...prev,
-          standby: message
+          standby: message,
         }))
-      )
+      );
 
       const standbyData = {
         ...accounts.standby,
-        amount: '',
-        destination: '',
-        currency: ''
-      }
-      setStandbyAccount(standbyData)
+        amount: "",
+        destination: "",
+        currency: "",
+      };
+      setStandbyAccount(standbyData);
 
       const operationalData = {
         ...accounts.operational,
-        amount: '',
-        destination: '',
-        currency: ''
-      }
-      setOperationalAccount(operationalData)
+        amount: "",
+        destination: "",
+        currency: "",
+      };
+      setOperationalAccount(operationalData);
 
       if (user && encryptionKey) {
-        await saveAccount(supabase, user.id, 'standby', standbyData, encryptionKey, server.includes('altnet') ? 'testnet' : 'devnet')
-        await saveAccount(supabase, user.id, 'operational', operationalData, encryptionKey, server.includes('altnet') ? 'testnet' : 'devnet')
+        await saveAccount(
+          supabase,
+          user.id,
+          "standby",
+          standbyData,
+          encryptionKey,
+          server.includes("altnet") ? "testnet" : "devnet"
+        );
+        await saveAccount(
+          supabase,
+          user.id,
+          "operational",
+          operationalData,
+          encryptionKey,
+          server.includes("altnet") ? "testnet" : "devnet"
+        );
       }
     } catch (error) {
-      console.error('Error getting accounts from seeds:', error)
-      setResults(prev => ({
+      console.error("Error getting accounts from seeds:", error);
+      setResults((prev) => ({
         ...prev,
-        standby: `Error: ${error.message}`
-      }))
+        standby: `Error: ${error.message}`,
+      }));
     }
-  }
+  };
 
-  const handleCopy = async (text: string, type: 'standby' | 'operational') => {
+  const handleCopy = async (text: string, type: "standby" | "operational") => {
     try {
-      await navigator.clipboard.writeText(text)
-      if (type === 'standby') {
-        setCopiedStandby(true)
-        setTimeout(() => setCopiedStandby(false), 2000)
+      await navigator.clipboard.writeText(text);
+      if (type === "standby") {
+        setCopiedStandby(true);
+        setTimeout(() => setCopiedStandby(false), 2000);
       } else {
-        setCopiedOperational(true)
-        setTimeout(() => setCopiedOperational(false), 2000)
+        setCopiedOperational(true);
+        setTimeout(() => setCopiedOperational(false), 2000);
       }
     } catch (err) {
-      console.error('Failed to copy text: ', err)
+      console.error("Failed to copy text: ", err);
     }
-  }
+  };
+
+  const handleCreateTrustline = async (type: "standby" | "operational") => {
+    try {
+      const account = type === "standby" ? standbyAccount : operationalAccount;
+
+      if (!account.amount || !account.destination || !account.currency) {
+        setResults((prev) => ({
+          ...prev,
+          [type]:
+            "Error: Amount, Destination, and Currency are required for creating a trustline",
+        }));
+        return;
+      }
+
+      await createTrustline(
+        account.seed,
+        account.currency,
+        account.destination,
+        account.amount,
+        server,
+        (message) =>
+          setResults((prev) => ({
+            ...prev,
+            [type]: message,
+          }))
+      );
+    } catch (error) {
+      setResults((prev) => ({
+        ...prev,
+        [type]: `Error creating trustline: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+      }));
+    }
+  };
 
   return (
     <div className="container mx-auto p-4 max-w-4xl">
@@ -174,7 +248,7 @@ export default function XRPLedgeDashboard() {
             type="radio"
             name="server"
             value="wss://s.altnet.rippletest.net:51233"
-            checked={server === 'wss://s.altnet.rippletest.net:51233'}
+            checked={server === "wss://s.altnet.rippletest.net:51233"}
             onChange={(e) => setServer(e.target.value)}
             className="mr-2"
           />
@@ -185,7 +259,7 @@ export default function XRPLedgeDashboard() {
             type="radio"
             name="server"
             value="wss://s.devnet.rippletest.net:51233"
-            checked={server === 'wss://s.devnet.rippletest.net:51233'}
+            checked={server === "wss://s.devnet.rippletest.net:51233"}
             onChange={(e) => setServer(e.target.value)}
             className="mr-2"
           />
@@ -201,7 +275,7 @@ export default function XRPLedgeDashboard() {
           placeholder="Enter seeds (one per line)"
           className="w-full p-2 border rounded h-24 mb-2"
         />
-        <Button 
+        <Button
           onClick={handleGetAccountsFromSeeds}
           className="w-full sm:w-auto"
         >
@@ -217,13 +291,13 @@ export default function XRPLedgeDashboard() {
             <CardTitle>Standby Account</CardTitle>
           </CardHeader>
           <CardContent>
-            <Button 
-              onClick={() => handleGetAccount('standby')}
+            <Button
+              onClick={() => handleGetAccount("standby")}
               className="w-full sm:w-auto mb-4"
             >
               Get New Standby Account
             </Button>
-            
+
             <div className="space-y-4">
               <div>
                 <label className="block mb-1">Account</label>
@@ -231,12 +305,19 @@ export default function XRPLedgeDashboard() {
                   <input
                     type="text"
                     value={standbyAccount.account}
-                    onChange={(e) => setStandbyAccount(prev => ({...prev, account: e.target.value}))}
+                    onChange={(e) =>
+                      setStandbyAccount((prev) => ({
+                        ...prev,
+                        account: e.target.value,
+                      }))
+                    }
                     className="w-full p-2 border rounded pr-10"
                   />
                   <button
                     type="button"
-                    onClick={() => handleCopy(standbyAccount.account, 'standby')}
+                    onClick={() =>
+                      handleCopy(standbyAccount.account, "standby")
+                    }
                     className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
                     title="Copy to clipboard"
                   >
@@ -263,7 +344,7 @@ export default function XRPLedgeDashboard() {
                   </button>
                 </div>
               </div>
-              
+
               <div>
                 <label className="block mb-1">XRP Balance</label>
                 <input
@@ -273,6 +354,52 @@ export default function XRPLedgeDashboard() {
                   className="w-full p-2 border rounded bg-gray-50"
                 />
               </div>
+
+              <div>
+                <label className="block mb-1">Amount</label>
+                <input
+                  type="text"
+                  value={standbyAccount.amount}
+                  onChange={(e) =>
+                    setStandbyAccount((prev) => ({
+                      ...prev,
+                      amount: e.target.value,
+                    }))
+                  }
+                  className="w-full p-2 border rounded"
+                  placeholder="Enter amount"
+                />
+              </div>
+              <div>
+                <label className="block mb-1">Destination</label>
+                <input
+                  type="text"
+                  value={standbyAccount.destination}
+                  onChange={(e) =>
+                    setStandbyAccount((prev) => ({
+                      ...prev,
+                      destination: e.target.value,
+                    }))
+                  }
+                  className="w-full p-2 border rounded"
+                  placeholder="Enter destination address"
+                />
+              </div>
+              <div>
+                <label className="block mb-1">Currency</label>
+                <input
+                  type="text"
+                  value={standbyAccount.currency}
+                  onChange={(e) =>
+                    setStandbyAccount((prev) => ({
+                      ...prev,
+                      currency: e.target.value,
+                    }))
+                  }
+                  className="w-full p-2 border rounded"
+                  placeholder="Enter currency code (e.g., USD)"
+                />
+              </div>
             </div>
 
             <textarea
@@ -280,6 +407,18 @@ export default function XRPLedgeDashboard() {
               readOnly
               className="w-full h-40 mt-4 p-2 border rounded"
             />
+            <Button
+              onClick={() => handleCreateTrustline("standby")}
+              className="w-full sm:w-auto mb-4"
+              disabled={
+                !standbyAccount.seed ||
+                !standbyAccount.amount ||
+                !standbyAccount.destination ||
+                !standbyAccount.currency
+              }
+            >
+              Create TrustLine
+            </Button>
           </CardContent>
         </Card>
 
@@ -289,13 +428,13 @@ export default function XRPLedgeDashboard() {
             <CardTitle>Operational Account</CardTitle>
           </CardHeader>
           <CardContent>
-            <Button 
-              onClick={() => handleGetAccount('operational')}
+            <Button
+              onClick={() => handleGetAccount("operational")}
               className="w-full sm:w-auto mb-4"
             >
               Get New Operational Account
             </Button>
-            
+
             <div className="space-y-4">
               <div>
                 <label className="block mb-1">Account</label>
@@ -303,16 +442,27 @@ export default function XRPLedgeDashboard() {
                   <input
                     type="text"
                     value={operationalAccount.account}
-                    onChange={(e) => setOperationalAccount(prev => ({...prev, account: e.target.value}))}
+                    onChange={(e) =>
+                      setOperationalAccount((prev) => ({
+                        ...prev,
+                        account: e.target.value,
+                      }))
+                    }
                     className="w-full p-2 border rounded pr-10"
                   />
                   <button
                     type="button"
-                    onClick={() => handleCopy(operationalAccount.account, 'operational')}
+                    onClick={() =>
+                      handleCopy(operationalAccount.account, "operational")
+                    }
                     className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
                     title="Copy to clipboard"
                   >
-                    {copiedOperational ? <Check size={20} /> : <Copy size={20} />}
+                    {copiedOperational ? (
+                      <Check size={20} />
+                    ) : (
+                      <Copy size={20} />
+                    )}
                   </button>
                 </div>
               </div>
@@ -331,7 +481,11 @@ export default function XRPLedgeDashboard() {
                     onClick={() => setShowOperationalSeed(!showOperationalSeed)}
                     className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
                   >
-                    {showOperationalSeed ? <EyeOff size={20} /> : <Eye size={20} />}
+                    {showOperationalSeed ? (
+                      <EyeOff size={20} />
+                    ) : (
+                      <Eye size={20} />
+                    )}
                   </button>
                 </div>
               </div>
@@ -345,6 +499,52 @@ export default function XRPLedgeDashboard() {
                   className="w-full p-2 border rounded bg-gray-50"
                 />
               </div>
+
+              <div>
+                <label className="block mb-1">Amount</label>
+                <input
+                  type="text"
+                  value={operationalAccount.amount}
+                  onChange={(e) =>
+                    setOperationalAccount((prev) => ({
+                      ...prev,
+                      amount: e.target.value,
+                    }))
+                  }
+                  className="w-full p-2 border rounded"
+                  placeholder="Enter amount"
+                />
+              </div>
+              <div>
+                <label className="block mb-1">Destination</label>
+                <input
+                  type="text"
+                  value={operationalAccount.destination}
+                  onChange={(e) =>
+                    setOperationalAccount((prev) => ({
+                      ...prev,
+                      destination: e.target.value,
+                    }))
+                  }
+                  className="w-full p-2 border rounded"
+                  placeholder="Enter destination address"
+                />
+              </div>
+              <div>
+                <label className="block mb-1">Currency</label>
+                <input
+                  type="text"
+                  value={operationalAccount.currency}
+                  onChange={(e) =>
+                    setOperationalAccount((prev) => ({
+                      ...prev,
+                      currency: e.target.value,
+                    }))
+                  }
+                  className="w-full p-2 border rounded"
+                  placeholder="Enter currency code (e.g., USD)"
+                />
+              </div>
             </div>
 
             <textarea
@@ -352,16 +552,30 @@ export default function XRPLedgeDashboard() {
               readOnly
               className="w-full h-40 mt-4 p-2 border rounded"
             />
+            <Button
+              onClick={() => handleCreateTrustline("operational")}
+              className="w-full sm:w-auto mb-4"
+              disabled={
+                !operationalAccount.seed ||
+                !operationalAccount.amount ||
+                !operationalAccount.destination ||
+                !operationalAccount.currency
+              }
+            >
+              Create TrustLine
+            </Button>
           </CardContent>
         </Card>
       </div>
 
       {/* AMM Section - CheckAMM with Results */}
-      <CheckAMM 
+      <CheckAMM
         server={server}
         ammAssets={ammAssets}
         setAmmAssets={setAmmAssets}
-        onResultsUpdate={(message) => setResults(prev => ({ ...prev, ammInfo: message }))}
+        onResultsUpdate={(message) =>
+          setResults((prev) => ({ ...prev, ammInfo: message }))
+        }
       />
 
       {/* AMM Results Section */}
@@ -377,7 +591,6 @@ export default function XRPLedgeDashboard() {
           />
         </CardContent>
       </Card>
-
     </div>
-  )
+  );
 }

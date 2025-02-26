@@ -161,3 +161,135 @@ Create a trustline from the operational account to the standby account. In the s
 - Enter a currency code in the Currency field. For example, TST.
 - Click Create Trustline.
 
+We need to convert the sample createTrustline function code to typescript to support this action.
+
+That is in this file: docs\xrpl-dev-portal\_code-samples\quickstart\js\ripplex2-send-currency.js
+
+The code looks like this:
+
+```js
+      
+async function createTrustline() {
+  let net = getNet()
+  const client = new xrpl.Client(net)
+  results = 'Connecting to ' + getNet() + '....'
+  standbyResultField.value = results
+
+  await client.connect()
+  results += '\nConnected.'
+  standbyResultField.value = results
+          
+  const standby_wallet = xrpl.Wallet.fromSeed(standbySeedField.value)
+  const operational_wallet = xrpl.Wallet.fromSeed(operationalSeedField.value)
+  const currency_code = standbyCurrencyField.value
+  const trustSet_tx = {
+    "TransactionType": "TrustSet",
+    "Account": standbyAccountField.value,
+    "LimitAmount": {
+      "currency": standbyCurrencyField.value,
+      "issuer": standbyDestinationField.value,
+      "value": standbyAmountField.value
+    }
+  }
+  const ts_prepared = await client.autofill(trustSet_tx)
+  const ts_signed = standby_wallet.sign(ts_prepared)
+  results += '\nCreating trust line from operational account to standby account...'
+  standbyResultField.value = results
+  const ts_result = await client.submitAndWait(ts_signed.tx_blob)
+  if (ts_result.result.meta.TransactionResult == "tesSUCCESS") {
+    results += '\nTrustline established between account \n' +
+      standbyDestinationField.value + ' \n and account\n' + standby_wallet.address + '.'
+    standbyResultField.value = results
+  } else {
+    results += '\nTrustLine failed. See JavaScript console for details.'
+    document.getElementById('standbyResultField').value = results     
+    throw `Error sending transaction: ${ts_result.result.meta.TransactionResult}`
+  }
+}
+```
+
+We can add our new function to src\lib\xrpl-helpers.ts.
+
+```ts
+interface TrustSetTransaction {
+  TransactionType: 'TrustSet';
+  Account: string;
+  LimitAmount: {
+    currency: string;
+    issuer: string;
+    value: string;
+  };
+}
+
+
+export const createTrustline = async (
+  standbyWalletSeed: string,
+  currency: string,
+  issuer: string,
+  value: string,
+  network: string,
+  onStatusUpdate: (message: string) => void
+) => {
+  const client = new Client(network)
+  
+  try {
+    onStatusUpdate(`Connecting to ${network}....`)
+    await client.connect()
+    onStatusUpdate('Connected.')
+
+    const standby_wallet = Wallet.fromSeed(standbyWalletSeed)
+    
+    const trustSet_tx: TrustSetTransaction = {
+      "TransactionType": "TrustSet",
+      "Account": standby_wallet.address,
+      "LimitAmount": {
+        "currency": currency,
+        "issuer": issuer,
+        "value": value
+      }
+    }
+
+    onStatusUpdate('Creating trust line from operational account to standby account...')
+    
+    const ts_prepared = await client.autofill(trustSet_tx)
+    const ts_signed = standby_wallet.sign(ts_prepared)
+    const ts_result = await client.submitAndWait(ts_signed.tx_blob)
+
+    await client.disconnect()
+
+    if ((typeof ts_result.result.meta === 'object' && 
+        ts_result.result.meta !== null && 
+        'TransactionResult' in ts_result.result.meta ? 
+        ts_result.result.meta.TransactionResult : 
+        'unknown error') === "tesSUCCESS") {
+      const successMessage = `Trustline established between account \n${issuer} \nand account\n${standby_wallet.address}.`
+      onStatusUpdate(successMessage)
+      return {
+        status: 'success',
+        message: successMessage,
+        result: ts_result
+      }
+    } else {
+      throw new Error(`Transaction failed: ${
+        typeof ts_result.result.meta === 'object' && 
+        ts_result.result.meta !== null && 
+        'TransactionResult' in ts_result.result.meta ? 
+        ts_result.result.meta.TransactionResult : 
+        'unknown error'
+      }`)
+    }
+
+  } catch (error) {
+    await client.disconnect()
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+    onStatusUpdate(`TrustLine failed: ${errorMessage}`)
+    throw error
+  }
+}
+```
+
+Lets use the createTrustline function when the user clicks the "Create Trustline" button.  I have added the xrp-helper.ts file and AMMManager.tsx file as context.  Since the steps to create a trustline require the user to enter a maximum transfer limit in the Amount field, the operational account address in the Destination field and a currency code in the Currency field, lets create a new button called "Setup Trustline" to copy the operational account address in the Destination field.
+
+Then we can use the createTrustline function when the user clicks the "Create Trustline" button.
+
+If the Amount field or Currency field are empty, we should show a validation message under this button saying that it is required.
